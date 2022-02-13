@@ -1,6 +1,7 @@
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.socket.io/4.4.1/socket.io.min.js" integrity="sha384-fKnu0iswBIqkjxrhQCTZ7qlLHOFEgNkRmK2vaO/LbTZSXdJfAu6ewRBdwHPhBo/H" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.2.0/lib/p5.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/p5@1.2.0/lib/p5.dom.js"></script>
     <style>
@@ -55,6 +56,8 @@
   <body>
     <div id="loader"><div><img src="https://miro.medium.com/max/1925/1*CsJ05WEGfunYMLGfsT2sXA.gif"></div><div>Waiting for other player to Enter.</div></div>
     <script>
+       let socket;
+      
       let pos1=0;
       let pos2=0;
       let ballPos;
@@ -66,6 +69,10 @@
         ballPos=createVector();
         speed=height/50;
         frameRate(30);
+        
+        socket=io();
+        socket.on('postData',(d)=>{getData(d)});
+        //hello world
       }
       function mouseDragged(){
         pos2=(mouseY-height/2)/height;
@@ -91,15 +98,13 @@
         circle(ballPos.x,ballPos.y,20);
       }
       async function post(){
-        options={
-          headers:{
-            "Content-Type":"application/json"
-          },
-          body:JSON.stringify({"pos":pos2}),
-          method:'POST'
+        let d={
+          "player":'p2',
+          "pos":pos2
         };
-        let response=await fetch('/p2',options);
-        let data=await response.json();
+        socket.emit('getMessage',d);
+      }
+      function getData(data){
         if(!data.p1_out){
           pos1=data.p1_pos;
           ballPos.x=data.ballPos.x*width;

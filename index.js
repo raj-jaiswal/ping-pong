@@ -1,12 +1,17 @@
+//using socket.io code here!
+
 const express=require('express');
 const app=express();
+const http=require('http').Server(app);
+app.use(express.static('public'));
 
-app.listen(3000,()=>{
+http.listen(3000,()=>{
   console.log('listening to port 3000');
 });
 
-app.use(express.json({limit:'1mb'}));
-app.use(express.static('public'));
+const io=require('socket.io')(http,{
+  cors:{origin:'*'}
+});
 
 //variables
 let p1Pos;
@@ -22,46 +27,45 @@ let date=new Date();
 p1Timestamp=date.getTime();
 p2Timestamp=p1Timestamp;
 
-
-//////////////
-app.post('/p1',(request,response)=>{
-  p1Pos=request.body.pos;
-  ballPos=request.body.ballPos;
-  score1=request.body.score1;
-  score2=request.body.score2;
-  let d=new Date();
-  let out=false;
-  p1Timestamp=d.getTime();
-  if(p1Timestamp-p2Timestamp>max){
-    out=true;
-  }
-  console.log('p2',out);
-  response.json({
-    p2_pos:p2Pos,
-    p2_out:out
+//when connection made 
+io.on('connection',(socket)=>{
+  console.log('connection made!');
+  //when message recieved
+  socket.on('getMessage',(message)=>{
+    if(message.player=='p1'){
+      p1Pos=message.pos;
+      ballPos=message.ballPos;
+      score1=message.score1;
+      score2=message.score2;
+      let d=new Date();
+      let out=false;
+      p1Timestamp=d.getTime();
+      if(p1Timestamp-p2Timestamp>max){
+        out=true;
+      }
+      io.to(socket.id).emit('postData',{
+        p2_pos:p2Pos,
+        p2_out:out
+      });
+    }
+    else{
+      p2Pos=message.pos;
+      let d=new Date();
+      let out=false;
+      p2Timestamp=d.getTime();
+      if(p2Timestamp-p1Timestamp>max){
+        out=true;
+      }
+      io.to(socket.id).emit('postData',{
+        p1_pos:p1Pos,
+        ballPos:ballPos,
+        p1_out:out,
+        'score1':score1,
+        'score2':score2
+      });
+    }
   });
 });
-
-
-///////////////
-app.post('/p2',(request,response)=>{
-  p2Pos=request.body.pos;
-  let d=new Date();
-  let out=false;
-  p2Timestamp=d.getTime();
-  if(p2Timestamp-p1Timestamp>max){
-    out=true;
-  }
-  console.log('p1',out);
-  response.json({
-    p1_pos:p1Pos,
-    ballPos:ballPos,
-    p1_out:out,
-    'score1':score1,
-    'score2':score2
-  });
-});
-
 
 setInterval(()=>{
   let now=date.getTime;
@@ -73,3 +77,4 @@ setInterval(()=>{
     score2=0;
   }
 },5000);
+
